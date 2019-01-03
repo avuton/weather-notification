@@ -48,8 +48,8 @@ abstract public class BaseWeatherInfoActivity extends Activity {
         ids = ResourceIdFactory.getInstance(this);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(ids.id(LAYOUT, "weather_info"));
-        
-        final ImageButton refreshButton = (ImageButton)findViewById(ids.id("refresh_button")); 
+
+        final ImageButton refreshButton = findViewById(ids.id("refresh_button"));
         refreshButton.setOnClickListener(new OnClickListener() {
             //@Override
             public void onClick(View v) {
@@ -57,8 +57,8 @@ abstract public class BaseWeatherInfoActivity extends Activity {
                 AppUtils.startUpdateService(BaseWeatherInfoActivity.this, true, true);
             }
         });
-        
-        ImageButton preferencesButton = (ImageButton)findViewById(ids.id("preferences_button")); 
+
+        ImageButton preferencesButton = findViewById(ids.id("preferences_button"));
         preferencesButton.setOnClickListener(new OnClickListener() {
             //@Override
             public void onClick(View v) {
@@ -98,7 +98,7 @@ abstract public class BaseWeatherInfoActivity extends Activity {
         @Override
         public void handleMessage(Message msg) {
             stopProgress();
-            Weather weather = (Weather)msg.getData().getParcelable(WEATHER_KEY);
+            Weather weather = msg.getData().getParcelable(WEATHER_KEY);
             if (weather == null) {
                 return;
             }

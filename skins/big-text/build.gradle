@@ -1,38 +1,31 @@
 buildscript {
     repositories {
         jcenter()
+        google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.3.3'
+        classpath 'com.android.tools.build:gradle:3.2.1'
     }
 }
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 25
-    buildToolsVersion '26.0.1'
+    compileSdkVersion 28
 
     defaultConfig {
-        minSdkVersion 9
-        targetSdkVersion 25
+        minSdkVersion 14
+        targetSdkVersion 28
         versionCode 53
         versionName '0.3.10'
     }
-//    buildTypes {
-//        release {
-//            runProguard false
-//            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
-//        }
-//    }
 
     lintOptions {
         abortOnError false
     }
-
 }
 
 dependencies {
-    compile project(':libpreference')
-    compile project(':libweather')
-    compile project(':libweatherskin')
+    api project(':libpreference')
+    api project(':libweather')
+    api project(':libweatherskin')
 }

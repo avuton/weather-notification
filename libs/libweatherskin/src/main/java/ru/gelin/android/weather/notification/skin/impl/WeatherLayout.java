@@ -59,7 +59,7 @@ public class WeatherLayout extends AbstractWeatherLayout {
 
     @Override
     protected void setText(int viewId, CharSequence text, int color) {
-        TextView textView = (TextView)this.view.findViewById(viewId);
+        TextView textView = this.view.findViewById(viewId);
         if (textView == null) {
             return;
         }
@@ -72,7 +72,7 @@ public class WeatherLayout extends AbstractWeatherLayout {
 
     @Override
     protected void setIcon(int viewId, Drawable drawable, int level) {
-        ImageView imageView = (ImageView)this.view.findViewById(viewId);
+        ImageView imageView = this.view.findViewById(viewId);
         if (imageView == null) {
             return;
         }

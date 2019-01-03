@@ -40,8 +40,7 @@ public class NetworkConnectivityReceiver extends BroadcastReceiver {
         if (noConnection) {
             return;
         }
-        NetworkInfo info = 
-            (NetworkInfo)intent.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
+        NetworkInfo info = intent.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
         if (info == null) {
             return;
         }

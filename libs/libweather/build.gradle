@@ -1,20 +1,20 @@
 buildscript {
     repositories {
         jcenter()
+        google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.3.3'
+        classpath 'com.android.tools.build:gradle:3.2.1'
     }
 }
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 25
-    buildToolsVersion '26.0.1'
+    compileSdkVersion 28
 
     defaultConfig {
-        minSdkVersion 4
-        targetSdkVersion 25
+        minSdkVersion 14
+        targetSdkVersion 28
         versionCode 1
         versionName '1.0'
     }
@@ -30,9 +30,11 @@ android.libraryVariants.all { variant ->
         options.links("http://docs.oracle.com/javase/7/docs/api/");
         options.linksOffline("http://d.android.com/reference","${android.sdkDirectory}/docs/reference");
 
-        // First add all of your dependencies to the classpath, then add the android jars
-        classpath += files(variant.javaCompile.classpath.files)
-        classpath += files(android.getBootClasspath())
+        doFirst {
+            // First add all of your dependencies to the classpath, then add the android jars
+            classpath += files(variant.javaCompile.classpath.files)
+            classpath += files(android.getBootClasspath())
+        }
 
         // We're excluding these generated files
         exclude '**/BuildConfig.java'

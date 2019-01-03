@@ -20,11 +20,14 @@
 package ru.gelin.android.weather.notification.skin.impl;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -58,7 +61,7 @@ abstract public class BaseWeatherNotificationReceiver extends
     /**
      *  Registers the handler to receive the new weather.
      *  The handler is owned by activity which have initiated the update.
-     *  The handler is used to update the weather displayed by the activity. 
+     *  The handler is used to update the weather displayed by the activity.
      */
     static synchronized void registerWeatherHandler(Handler handler) {
         BaseWeatherNotificationReceiver.handler = handler;
@@ -85,8 +88,20 @@ abstract public class BaseWeatherNotificationReceiver extends
         storage.save(weather);
 
         WeatherFormatter formatter = getWeatherFormatter(context, weather);
+        final NotificationCompat.Builder builder;
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            final int importance;
+            final NotificationChannel channel;
+
+            channel = new NotificationChannel("FIXME",
+                "FIXME2", NotificationManager.IMPORTANCE_HIGH);
+            getNotificationManager(context).createNotificationChannel(channel);
+            builder = new NotificationCompat.Builder(context, "FIXME");
+        } else {
+            //noinspection deprecation
+            builder = new NotificationCompat.Builder(context);
+        }
 
         builder.setSmallIcon(getNotificationIconId(weather));
 

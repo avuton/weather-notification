@@ -52,7 +52,7 @@ public class ClickableEditTextPreference extends EditTextPreference {
     protected void onBindDialogView(View view) {
         super.onBindDialogView(view);
 
-        TextView message = (TextView) view.findViewById(android.R.id.message);
+        TextView message = view.findViewById(android.R.id.message);
         Linkify.addLinks(message, Linkify.ALL);
     }
 
