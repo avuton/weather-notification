@@ -32,7 +32,9 @@ public class ExternalAppsAvailableReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        AppUtils.startUpdateService(context);
+        final UpdateJobCreator updateJobCreator = new UpdateJobCreator(context);
+
+        updateJobCreator.scheduleNow();
     }
 
 }

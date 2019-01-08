@@ -185,7 +185,10 @@ public abstract class BaseMainActivity extends UpdateNotificationActivity
 
     void startUpdate(boolean force) {
         setProgressBarIndeterminateVisibility(true);
-        AppUtils.startUpdateService(this, true, force);
+        final UpdateJobCreator updateJobCreator = new UpdateJobCreator(this);
+        updateJobCreator.setForcedUpdate(true);
+        updateJobCreator.setExtraVerbose(true);
+        updateJobCreator.scheduleNow();
     }
 
     void checkAndRequestPermissions(LocationType locationType) {

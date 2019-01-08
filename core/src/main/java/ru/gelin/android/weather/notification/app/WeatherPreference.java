@@ -56,19 +56,25 @@ public class WeatherPreference extends Preference implements OnSharedPreferenceC
         Weather weather = storage.load();
         layout.bind(weather);
     }
-    
+
     @Override
     protected void onClick() {
         super.onClick();
-        AppUtils.startUpdateService(getContext(), true, true);
+
+        final UpdateJobCreator updateJobCreator = new UpdateJobCreator(getContext());
+
+        updateJobCreator.setExtraVerbose(true);
+        updateJobCreator.setForcedUpdate(true);
+
+        updateJobCreator.scheduleNow();
     }
-    
+
     @Override
     protected void onAttachedToHierarchy(PreferenceManager preferenceManager) {
         super.onAttachedToHierarchy(preferenceManager);
         getSharedPreferences().registerOnSharedPreferenceChangeListener(this);
     }
-    
+
     //@Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
             String key) {

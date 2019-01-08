@@ -26,29 +26,32 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.util.Log;
 import ru.gelin.android.weather.notification.AppUtils;
+import ru.gelin.android.weather.notification.Tag;
 
 /**
  *  Broadcast receiver which receives event about changes of network connectivity.
  *  Starts UpdateService if the network goes up.
  */
-public class NetworkConnectivityReceiver extends BroadcastReceiver {
+public class UpdateJobScheduling extends BroadcastReceiver {
+
+    /** Main app package name */
+    private static final String APP_PACKAGE_NAME = Tag.class.getPackage().getName();
+
+    /** Intent action to start the main activity */
+    public static String ACTION_START_UPDATE_JOB_SERVICE =
+        APP_PACKAGE_NAME + ".ACTION_START_UPDATE_JOB_SERVICE";
 
     @Override
     public void onReceive (Context context, Intent intent) {
-        boolean noConnection = 
-            intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false);
-        if (noConnection) {
-            return;
-        }
-        NetworkInfo info = intent.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
-        if (info == null) {
-            return;
-        }
-        if (!info.isAvailable()) {
-            return;
-        }
-        Log.d(Tag.TAG, "network is up");
-        AppUtils.startUpdateService(context);
-    }
+        Log.e("UpdateJobScheduling", "Updating job");
 
+        final UpdateJobCreator updateJobCreator = new UpdateJobCreator(context);
+        final boolean extraVerbose = intent.getBooleanExtra(UpdateJobCreator.EXTRA_VERBOSE, false);
+        final boolean forceUpdate = intent.getBooleanExtra(UpdateJobCreator.EXTRA_FORCE, true);
+
+        updateJobCreator.setExtraVerbose(extraVerbose);
+        updateJobCreator.setForcedUpdate(forceUpdate);
+
+        updateJobCreator.scheduleNow();
+    }
 }

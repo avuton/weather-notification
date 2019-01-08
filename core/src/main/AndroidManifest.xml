@@ -71,21 +71,19 @@
 
         <activity android:name=".app.DebugActivity"/>
 
+
+
         <service android:name=".app.UpdateService"
-                android:permission="ru.gelin.android.weather.notification.START_UPDATE_SERVICE">
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="true">
             <intent-filter>
                 <action android:name="ru.gelin.android.weather.notification.ACTION_START_UPDATE_SERVICE"/>
             </intent-filter>
         </service>
 
-        <receiver android:name=".app.BootCompletedReceiver">
+        <receiver android:name=".app.UpdateJobScheduling">
             <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED"/>
-            </intent-filter>
-        </receiver>
-        <receiver android:name=".app.NetworkConnectivityReceiver">
-            <intent-filter>
-                <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
+                <action android:name="ru.gelin.android.weather.notification.ACTION_START_UPDATE_JOB_SERVICE"/>
             </intent-filter>
         </receiver>
         <receiver android:name=".app.ExternalAppsAvailableReceiver">

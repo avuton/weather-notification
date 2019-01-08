@@ -21,15 +21,18 @@ package ru.gelin.android.weather.notification.skin.impl;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
 import android.widget.ImageButton;
 import ru.gelin.android.weather.Weather;
 import ru.gelin.android.weather.notification.AppUtils;
+import ru.gelin.android.weather.notification.Tag;
 import ru.gelin.android.weather.notification.WeatherStorage;
 
 import static ru.gelin.android.weather.notification.skin.impl.BaseWeatherNotificationReceiver.WEATHER_KEY;
@@ -39,9 +42,9 @@ import static ru.gelin.android.weather.notification.skin.impl.ResourceIdFactory.
  *  Base class for weather info activity.
  */
 abstract public class BaseWeatherInfoActivity extends Activity {
-    
+
     ResourceIdFactory ids;
-    
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -54,7 +57,11 @@ abstract public class BaseWeatherInfoActivity extends Activity {
             //@Override
             public void onClick(View v) {
                 startProgress();
-                AppUtils.startUpdateService(BaseWeatherInfoActivity.this, true, true);
+Log.e("BaseWeatherActivity", "Attempting to update a: " + "ru.gelin.android.weather.notification.ACTION_START_UPDATE_JOB_SERVICE");
+                final Intent intent = new Intent("ru.gelin.android.weather.notification.ACTION_START_UPDATE_JOB_SERVICE");
+                sendBroadcast(intent);
+                //TODO: FIXME
+                //AppUtils.startUpdateService(BaseWeatherInfoActivity.this, true, true);
             }
         });
 
@@ -66,7 +73,7 @@ abstract public class BaseWeatherInfoActivity extends Activity {
                 AppUtils.startMainActivity(BaseWeatherInfoActivity.this);
             }
         });
-        
+
         View wholeActivity = findViewById(ids.id("weather_info"));
         wholeActivity.setOnClickListener(new OnClickListener() {
             //@Override
@@ -75,7 +82,7 @@ abstract public class BaseWeatherInfoActivity extends Activity {
             }
         });
     }
-    
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -87,7 +94,7 @@ abstract public class BaseWeatherInfoActivity extends Activity {
         //Location location = weather.getLocation();
         //setTitle(location == null ? "" : location.getText());
     }
-    
+
     @Override
     protected void onPause() {
         super.onPause();
@@ -108,19 +115,19 @@ abstract public class BaseWeatherInfoActivity extends Activity {
             layout.bind(weather);
         };
     };
-    
+
     void startProgress() {
         View refreshButton = findViewById(ids.id("refresh_button"));
         refreshButton.setEnabled(false);
         //Animation rotate = AnimationUtils.loadAnimation(this, R.anim.rotate);
         //refreshButton.startAnimation(rotate);
     }
-    
+
     void stopProgress() {
         View refreshButton = findViewById(ids.id("refresh_button"));
         refreshButton.setEnabled(true);
     }
-    
+
     /**
      *  Creates the weather layout to render activity.
      */

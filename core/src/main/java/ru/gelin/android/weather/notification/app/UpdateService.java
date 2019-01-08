@@ -20,6 +20,9 @@
 package ru.gelin.android.weather.notification.app;
 
 import android.app.*;
+import android.app.job.JobInfo;
+import android.app.job.JobParameters;
+import android.app.job.JobService;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -27,8 +30,8 @@ import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Message;
+import android.os.PersistableBundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
@@ -44,10 +47,9 @@ import ru.gelin.android.weather.openweathermap.NameOpenWeatherMapLocation;
 import ru.gelin.android.weather.openweathermap.OpenWeatherMapSource;
 
 import java.lang.ref.WeakReference;
-import java.util.Date;
 
-import static ru.gelin.android.weather.notification.AppUtils.EXTRA_FORCE;
-import static ru.gelin.android.weather.notification.AppUtils.EXTRA_VERBOSE;
+import static ru.gelin.android.weather.notification.app.UpdateJobCreator.EXTRA_FORCE;
+import static ru.gelin.android.weather.notification.app.UpdateJobCreator.EXTRA_VERBOSE;
 import static ru.gelin.android.weather.notification.PreferenceKeys.ENABLE_NOTIFICATION;
 import static ru.gelin.android.weather.notification.PreferenceKeys.ENABLE_NOTIFICATION_DEFAULT;
 import static ru.gelin.android.weather.notification.app.PermissionNotifications.ACCESS_LOCATION_NOTIFICATION;
@@ -59,7 +61,7 @@ import static ru.gelin.android.weather.notification.app.Tag.TAG;
  *  Just start it. The new weather values will be wrote to SharedPreferences
  *  (use {@link ru.gelin.android.weather.notification.WeatherStorage} to extract them).
  */
-public class UpdateService extends Service implements Runnable {
+public class UpdateService extends JobService implements Runnable {
 
     /** Success update message */
     static final int SUCCESS = 0;
@@ -92,60 +94,6 @@ public class UpdateService extends Service implements Runnable {
     Exception updateError;
     /** Intent which starts the service */
     Intent startIntent;
-
-    @Override
-    public void onStart(Intent intent, int startId) {
-        super.onStart(intent, startId);
-
-        synchronized(this) {
-            this.startIntent = intent;
-            if (intent != null) {
-                this.verbose = intent.getBooleanExtra(EXTRA_VERBOSE, false);
-                this.force = intent.getBooleanExtra(EXTRA_FORCE,
-                        intent.hasExtra(LocationManager.KEY_LOCATION_CHANGED)); // force weather update if location update came
-            }
-        }
-
-        removeLocationUpdates();
-
-        SharedPreferences preferences =
-            PreferenceManager.getDefaultSharedPreferences(this);
-
-        WeatherStorage storage = new WeatherStorage(UpdateService.this);
-        Weather weather = storage.load();
-        long lastUpdate = weather.getTime().getTime();
-        boolean notificationEnabled = preferences.getBoolean(
-                ENABLE_NOTIFICATION, ENABLE_NOTIFICATION_DEFAULT);
-
-        scheduleNextRun(lastUpdate);
-
-        synchronized(staticLock) {
-            if (threadRunning) {
-                return;     // only start processing thread if not already running
-            }
-            if (!force && !notificationEnabled) {
-                skipUpdate(storage, "skipping update, notification disabled");
-                return;
-            }
-            if (!force && !isExpired(lastUpdate)) {
-                skipUpdate(storage, "skipping update, not expired");
-                return;
-            }
-            if (!isNetworkAvailable()) {    //no network
-                skipUpdate(storage, "skipping update, no network");
-                if (verbose) {
-                    Toast.makeText(UpdateService.this,
-                            getString(R.string.weather_update_no_network),
-                            Toast.LENGTH_LONG).show();
-                }
-                return;
-            }
-            if (!threadRunning) {
-                threadRunning = true;
-                new Thread(this).start();
-            }
-        }
-    }
 
     void skipUpdate(WeatherStorage storage, String logMessage) {
         stopSelf();
@@ -224,7 +172,6 @@ public class UpdateService extends Service implements Runnable {
                         } else {
                             storage.save(service.weather);  //saving only non-empty weather
                         }
-                        service.scheduleNextRun(service.weather.getTime().getTime());
                         if (service.verbose && service.weather.isEmpty()) {
                             Toast.makeText(service,
                                     service.getString(R.string.weather_update_empty, service.location.getText()),
@@ -282,30 +229,6 @@ public class UpdateService extends Service implements Runnable {
         long now = System.currentTimeMillis();
         RefreshInterval interval = getRefreshInterval();
         return timestamp + interval.getInterval() < now;
-    }
-
-    void scheduleNextRun(long lastUpdate) {
-        long now = System.currentTimeMillis();
-        RefreshInterval interval = getRefreshInterval();
-        long nextUpdate = lastUpdate + interval.getInterval();
-        if (nextUpdate <= now) {
-            nextUpdate = now + interval.getInterval();
-        }
-
-        PendingIntent pendingIntent = getPendingIntent(null);   //don't inherit extra flags
-
-        boolean notificationEnabled = PreferenceManager.getDefaultSharedPreferences(this).
-                getBoolean(ENABLE_NOTIFICATION, ENABLE_NOTIFICATION_DEFAULT);
-
-        AlarmManager alarmManager = (AlarmManager)getSystemService(
-                Context.ALARM_SERVICE);
-        if (notificationEnabled) {
-            Log.d(TAG, "scheduling update to " + new Date(nextUpdate));
-            alarmManager.set(AlarmManager.RTC, nextUpdate, pendingIntent);
-        } else {
-            Log.d(TAG, "cancelling update schedule");
-            alarmManager.cancel(pendingIntent);
-        }
     }
 
     RefreshInterval getRefreshInterval() {
@@ -452,9 +375,115 @@ public class UpdateService extends Service implements Runnable {
         return PendingIntent.getService(this, 0, serviceIntent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
+    /**
+     * Called to indicate that the job has begun executing.  Override this method with the
+     * logic for your job.  Like all other component lifecycle callbacks, this method executes
+     * on your application's main thread.
+     * <p>
+     * Return {@code true} from this method if your job needs to continue running.  If you
+     * do this, the job remains active until you call
+     * {@link #jobFinished(JobParameters, boolean)} to tell the system that it has completed
+     * its work, or until the job's required constraints are no longer satisfied.  For
+     * example, if the job was scheduled using
+     * {@link JobInfo.Builder#setRequiresCharging(boolean) setRequiresCharging(true)},
+     * it will be immediately halted by the system if the user unplugs the device from power,
+     * the job's {@link #onStopJob(JobParameters)} callback will be invoked, and the app
+     * will be expected to shut down all ongoing work connected with that job.
+     * <p>
+     * The system holds a wakelock on behalf of your app as long as your job is executing.
+     * This wakelock is acquired before this method is invoked, and is not released until either
+     * you call {@link #jobFinished(JobParameters, boolean)}, or after the system invokes
+     * {@link #onStopJob(JobParameters)} to notify your job that it is being shut down
+     * prematurely.
+     * <p>
+     * Returning {@code false} from this method means your job is already finished.  The
+     * system's wakelock for the job will be released, and {@link #onStopJob(JobParameters)}
+     * will not be invoked.
+     *
+     * @param params Parameters specifying info about this job, including the optional
+     *               extras configured with {@link JobInfo.Builder#setExtras(PersistableBundle).
+     *               This object serves to identify this specific running job instance when calling
+     *               {@link #jobFinished(JobParameters, boolean)}.
+     * @return {@code true} if your service will continue running, using a separate thread
+     * when appropriate.  {@code false} means that this job has completed its work.
+     */
     @Override
-    public IBinder onBind(Intent intent) {
-        return null;
+    public boolean onStartJob(JobParameters params) {
+        Log.e(TAG, "onStartJob()");
+
+        final PersistableBundle bundle = params.getExtras();
+
+        synchronized(this) {
+                this.verbose = bundle.getBoolean(EXTRA_VERBOSE);
+                this.force = bundle.getBoolean(EXTRA_FORCE); // force weather update if location update came
+        }
+
+        removeLocationUpdates();
+
+        SharedPreferences preferences =
+            PreferenceManager.getDefaultSharedPreferences(this);
+
+        WeatherStorage storage = new WeatherStorage(UpdateService.this);
+        Weather weather = storage.load();
+        long lastUpdate = weather.getTime().getTime();
+        boolean notificationEnabled = preferences.getBoolean(
+            ENABLE_NOTIFICATION, ENABLE_NOTIFICATION_DEFAULT);
+
+        synchronized(staticLock) {
+            if (threadRunning) {
+                return false; // only start processing thread if not already running
+            }
+            if (!force && !notificationEnabled) {
+                skipUpdate(storage, "skipping update, notification disabled");
+                return false;
+            }
+            if (!force && !isExpired(lastUpdate)) {
+                skipUpdate(storage, "skipping update, not expired");
+                return false;
+            }
+            if (!isNetworkAvailable()) {    //no network
+                skipUpdate(storage, "skipping update, no network");
+                if (verbose) {
+                    Toast.makeText(UpdateService.this,
+                        getString(R.string.weather_update_no_network),
+                        Toast.LENGTH_LONG).show();
+                }
+                return false;
+            }
+            if (!threadRunning) {
+                threadRunning = true;
+                new Thread(this).start();
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * This method is called if the system has determined that you must stop execution of your job
+     * even before you've had a chance to call {@link #jobFinished(JobParameters, boolean)}.
+     *
+     * <p>This will happen if the requirements specified at schedule time are no longer met. For
+     * example you may have requested WiFi with
+     * {@link JobInfo.Builder#setRequiredNetworkType(int)}, yet while your
+     * job was executing the user toggled WiFi. Another example is if you had specified
+     * {@link JobInfo.Builder#setRequiresDeviceIdle(boolean)}, and the phone left its
+     * idle maintenance window. You are solely responsible for the behavior of your application
+     * upon receipt of this message; your app will likely start to misbehave if you ignore it.
+     * <p>
+     * Once this method returns, the system releases the wakelock that it is holding on
+     * behalf of the job.</p>
+     *
+     * @param params The parameters identifying this job, as supplied to
+     *               the job in the {@link #onStartJob(JobParameters)} callback.
+     * @return {@code true} to indicate to the JobManager whether you'd like to reschedule
+     * this job based on the retry criteria provided at job creation-time; or {@code false}
+     * to end the job entirely.  Regardless of the value returned, your job must stop executing.
+     */
+    @Override
+    public boolean onStopJob(JobParameters params) {
+        Log.e(TAG, "onStopJob");
+        return false;
     }
 
 }
